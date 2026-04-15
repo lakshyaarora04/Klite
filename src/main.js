@@ -4,6 +4,7 @@
 // ═══════════════════════════════════════════
 import './style.css';
 import { PRODUCTS, NOTIFICATIONS, ORDERS } from './data.js';
+import { suggestCounterOffer, predictVendorResponse } from './aiModels.js';
 import {
   renderBrowse, renderProductDetail, renderNegotiation,
   renderLogistics, renderOffice, renderNetwork
@@ -394,6 +395,39 @@ function handleAction(action, dataset) {
       `);
       break;
 
+    case 'ai-suggest': {
+      const activeProduct = PRODUCTS.find(x => x.id === 'sunflower-oil-003') || PRODUCTS[0];
+      const suggestion = suggestCounterOffer({
+        product: activeProduct,
+        vendorOffer: 1780,
+        yourLastOffer: 1800
+      });
+
+      showModal(`
+        <div class="counter-modal">
+          <h2>✨ AI Counter Suggestion</h2>
+          <div class="current-offer">Current offer from Kanchi Foods: <strong>₹1,780/tin</strong></div>
+          <div style="background:var(--surface-container-low);border-radius:var(--radius-sm);padding:0.8rem 1rem;margin:0.8rem 0 1rem;">
+            <div style="font:var(--headline-md);color:var(--primary);">Suggested: ₹${suggestion.suggestedPrice.toLocaleString('en-IN')}/tin</div>
+            <div style="font:var(--body-sm);color:var(--outline);margin-top:0.25rem;">Confidence ${suggestion.confidence}% • ${suggestion.explanation}</div>
+          </div>
+          <div class="input-group">
+            <label>Your Counter Price (₹)</label>
+            <input type="number" class="input-field" id="counter-price" value="${suggestion.suggestedPrice}" />
+          </div>
+          <div class="input-group">
+            <label>Message (optional)</label>
+            <textarea class="input-field" id="counter-message" rows="3" style="resize:vertical;">Based on current market movement, I can close at ₹${suggestion.suggestedPrice}/tin for 300 units on Net 15 terms.</textarea>
+          </div>
+          <div class="btn-row">
+            <button class="btn-primary" data-action="send-counter">Use Suggestion</button>
+            <button class="btn-tertiary" onclick="document.getElementById('modal-overlay').classList.add('hidden')">Cancel</button>
+          </div>
+        </div>
+      `);
+      break;
+    }
+
     case 'send-counter': {
       const price = document.getElementById('counter-price')?.value || '11650';
       const msg = document.getElementById('counter-message')?.value || '';
@@ -505,7 +539,12 @@ function simulateVendorResponse(yourPrice) {
   const chatMessages = document.getElementById('chat-messages');
   if (!chatMessages) return;
 
-  const responsePrice = Math.round((yourPrice + 1780) / 2 / 10) * 10;
+  const activeProduct = PRODUCTS.find(x => x.id === 'sunflower-oil-003') || PRODUCTS[0];
+  const responsePrice = predictVendorResponse({
+    vendorOffer: 1780,
+    yourCounter: yourPrice,
+    product: activeProduct
+  });
   const newMsg = document.createElement('div');
   newMsg.className = 'msg-group animate-in';
   newMsg.innerHTML = `

@@ -3,6 +3,7 @@
 // Each function returns HTML for a view
 // ═══════════════════════════════════════════
 import { PRODUCTS, CATEGORIES, NEGOTIATIONS, ORDERS, VENDORS } from './data.js';
+import { predictProductSignals } from './aiModels.js';
 
 export function renderBrowse(filter = '') {
   const filtered = filter ? PRODUCTS.filter(p => p.category === filter) : PRODUCTS;
@@ -69,6 +70,8 @@ export function renderProductCard(p, i = 0) {
 
 export function renderProductDetail(productId) {
   const p = PRODUCTS.find(x => x.id === productId) || PRODUCTS[0];
+  const signals = predictProductSignals(p);
+  const deltaLabel = `${signals.deltaPct > 0 ? '+' : ''}${signals.deltaPct}%`;
   const specEntries = Object.entries(p.specs);
   const chartData = [
     { label: '01 Oct', light: 55, dark: 48 },
@@ -139,8 +142,9 @@ export function renderProductDetail(productId) {
             <div class="subtitle">Price movement for ${p.name} over 30 days</div>
           </div>
           <div class="trend-badges">
-            <span class="badge badge-ready">Trend: Bullish</span>
-            <span class="badge badge-new">+4.2% MoM</span>
+            <span class="badge badge-ready">Trend: ${signals.trend}</span>
+            <span class="badge badge-new">${deltaLabel} weekly forecast</span>
+            <span class="badge badge-verified" style="background: linear-gradient(45deg, #10b981, #059669); color: white; border: none; box-shadow: 0 2px 8px rgba(16,185,129,0.2);">✨ Cortex AI: ${signals.confidence}% confidence | Demand ${signals.demandIndex}/100</span>
           </div>
         </div>
         <div class="chart-container" id="price-chart">
@@ -253,6 +257,7 @@ export function renderNegotiation() {
         <div class="chat-actions">
           <button class="btn-primary" id="btn-accept-offer" data-action="accept-offer">✅ Accept Offer</button>
           <button class="btn-secondary" id="btn-counter" data-action="counter-offer">✏️ Counter</button>
+          <button class="btn-tertiary" id="btn-ai-suggest" data-action="ai-suggest" style="border-color:#10b981; color:#059669;">✨ Auto-Counter</button>
           <button class="btn-tertiary" id="btn-decline" data-action="decline-offer" style="margin-left:auto;">❌ Decline</button>
         </div>
       </div>
@@ -397,6 +402,9 @@ export function renderLogistics(orderId) {
 export function renderOffice() {
   const hour = new Date().getHours();
   const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
+  const bestProduct = PRODUCTS
+    .map(product => ({ product, signals: predictProductSignals(product) }))
+    .sort((a, b) => b.signals.deltaPct - a.signals.deltaPct)[0];
 
   return `
     <div class="office-page">
@@ -469,6 +477,10 @@ export function renderOffice() {
           <div class="quick-action-card" data-navigate="logistics">
             <h3>🚚 Track Shipments</h3>
             <p>Monitor deliveries and access shipping documents.</p>
+          </div>
+          <div class="quick-action-card" style="background: linear-gradient(145deg, #f0fdf4, #e8f5e9); border: 1px solid #bbf7d0;">
+            <h3 style="color:#059669;">✨ Cortex AI Insights</h3>
+            <p>Model signal: <strong>${bestProduct.product.name}</strong> has a projected ${bestProduct.signals.deltaPct > 0 ? 'price rise' : 'price drop'} of <strong>${bestProduct.signals.deltaPct > 0 ? '+' : ''}${bestProduct.signals.deltaPct}%</strong> next week with ${bestProduct.signals.confidence}% confidence. <a href="#" style="color:#10b981; font-weight:bold; display:block; margin-top:0.5rem;" data-action="view-product" data-product-id="${bestProduct.product.id}">Action Insight →</a></p>
           </div>
         </div>
       </div>

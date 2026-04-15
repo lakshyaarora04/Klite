@@ -729,4 +729,4 @@ navigate('browse');
 renderNotifications();
 startRealtimeSimulation();
 
-console.log('🏗️ InventoryExchange — The Hyperlocal B2B Exchange loaded.');
+console.log('🏗️ Klite — The Hyperlocal B2B Exchange loaded.');
